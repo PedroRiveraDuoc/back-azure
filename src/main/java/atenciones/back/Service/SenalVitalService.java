@@ -45,6 +45,6 @@ public class SenalVitalService {
     private boolean esAnomalia(SenalVital senal) {
         return senal.getTemperatura() < 36.0 || senal.getTemperatura() > 38.5 ||
                 senal.getPulso() < 50 || senal.getPulso() > 120 ||
-                senal.getRitmoRespiratorio() < 10 || senal.getRitmoRespiratorio() > 25;
+                senal.getRitmoRespiratorio() < 12 || senal.getRitmoRespiratorio() > 30;
     }
 }

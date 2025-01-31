@@ -15,6 +15,6 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue alertasQueue() {
-        return new Queue(alertasQueueName, true);
+        return new Queue(alertasQueueName, true, false, false);
     }
 }
