@@ -2,6 +2,8 @@ package atenciones.back.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -60,6 +62,7 @@ public class SenalVital {
 
     @ManyToOne
     @JoinColumn(name = "id", referencedColumnName = "id")
+    @JsonIgnore
     private Paciente paciente;
 
     @Override
