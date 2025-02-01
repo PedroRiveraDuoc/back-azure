@@ -61,50 +61,74 @@ public class SenalVital {
     @ManyToOne
     @JoinColumn(name = "id", referencedColumnName = "id")
     private Paciente paciente;
-    
- 
+
+    @Override
+    public String toString() {
+        return String.format(
+                "SenalVital[id=%d, temp=%.1f, pulso=%d, ritmo=%d, estado=%s]",
+                id_servicio, temperatura, pulso, ritmoRespiratorio, pacienteEstado);
+    }
+
     public Double getTemperatura() {
         return temperatura;
     }
+
     public void setTemperatura(Double temperatura) {
         this.temperatura = temperatura;
     }
+
     public Integer getPulso() {
         return pulso;
     }
+
     public void setPulso(Integer pulso) {
         this.pulso = pulso;
     }
+
     public Integer getRitmoRespiratorio() {
         return ritmoRespiratorio;
     }
+
     public void setRitmoRespiratorio(Integer ritmoRespiratorio) {
         this.ritmoRespiratorio = ritmoRespiratorio;
     }
+
     public String getPresionArterial() {
         return presionArterial;
     }
+
     public void setPresionArterial(String presionArterial) {
         this.presionArterial = presionArterial;
     }
+
     public String getComentario() {
         return comentario;
     }
+
     public void setComentario(String comentario) {
         this.comentario = comentario;
     }
+
+    public Paciente getPaciente() {
+        return paciente;
+    }
+    
     public String getPacienteEstado() {
         return pacienteEstado;
     }
+
     public void setPacienteEstado(String pacienteEstado) {
         this.pacienteEstado = pacienteEstado;
     }
+
     public void setPaciente(Paciente paciente) {
         this.paciente = paciente;
     }
+
     public Long getId_servicio() {
         return id_servicio;
     }
+
     public void setId_servicio(Long id_servicio) {
         this.id_servicio = id_servicio;
     }

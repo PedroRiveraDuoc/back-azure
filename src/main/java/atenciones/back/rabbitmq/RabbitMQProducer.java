@@ -8,16 +8,44 @@ import org.springframework.beans.factory.annotation.Value;
 public class RabbitMQProducer {
     private final RabbitTemplate rabbitTemplate;
 
+    // 1. Mejor práctica: Usar nombres descriptivos para las propiedades
+    @Value("${app.rabbitmq.exchange}")
+    private String exchangeName; // [MODIFICADO] Mejor nombre de variable
+
     @Value("${app.rabbitmq.queue.alertas}")
-    private String alertasQueueName;
+    private String queueName; // [MODIFICADO] Nombre más descriptivo
+
+    // 2. Nueva propiedad para la routing key (necesaria para el binding)
+    @Value("${app.rabbitmq.routingkey}")
+    private String routingKey; // [AGREGADO] Parámetro esencial
 
     public RabbitMQProducer(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
 
     public void enviarMensajeAlerta(String mensaje) {
-        System.out.println("Enviando mensaje a RabbitMQ: " + mensaje);
-        rabbitTemplate.convertAndSend(alertasQueueName, mensaje);
-        System.out.println("Mensaje enviado a RabbitMQ: " + mensaje);
+        // 3. Logs más informativos con detalles técnicos
+        System.out.println("Iniciando envío de mensaje - Exchange: " + exchangeName
+                + " | Routing Key: " + routingKey
+                + " | Mensaje: " + mensaje);
+
+        // 4. Envío correcto con los 3 parámetros requeridos
+        rabbitTemplate.convertAndSend(
+                exchangeName, // Nombre del exchange
+                routingKey, // Routing key (NO usar queueName aquí)
+                mensaje // Cuerpo del mensaje
+        );
+
+        // 5. Mensaje de confirmación con formato JSON
+        System.out.println(String.format("""
+                Envío exitoso a RabbitMQ:
+                {
+                    "exchange": "%s",
+                    "routingKey": "%s",
+                    "messageLength": %d
+                }""",
+                exchangeName,
+                routingKey,
+                mensaje.length()));
     }
 }
