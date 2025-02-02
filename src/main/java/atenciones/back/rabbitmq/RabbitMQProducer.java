@@ -37,15 +37,16 @@ public class RabbitMQProducer {
         );
 
         // 5. Mensaje de confirmación con formato JSON
-        System.out.println(String.format("""
-                Envío exitoso a RabbitMQ:
-                {
-                    "exchange": "%s",
-                    "routingKey": "%s",
-                    "messageLength": %d
-                }""",
-                exchangeName,
-                routingKey,
-                mensaje.length()));
+        System.out.println(String.format(
+            "Envío exitoso a RabbitMQ:\n" +
+            "{\n" +
+            "    \"exchange\": \"%s\",\n" +
+            "    \"routingKey\": \"%s\",\n" +
+            "    \"messageLength\": %d\n" +
+            "}",
+            exchangeName,
+            routingKey,
+            mensaje.length()
+        ));
     }
 }
