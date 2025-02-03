@@ -130,7 +130,7 @@ public class SenalVitalService {
      * senal.getPacienteEstado());
      * }
      */
-    private void guardarAlertaEnArchivo(SenalVital senal) {
+    public void guardarAlertaEnArchivo(SenalVital senal) {
         ObjectMapper objectMapper = new ObjectMapper();
         String nombreArchivo = "alerta_" + senal.getPaciente().getId() + ".json";
 

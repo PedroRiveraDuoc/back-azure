@@ -1,5 +1,7 @@
 package atenciones.back.controllers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import atenciones.back.Service.PacienteService;
 import atenciones.back.Service.SenalVitalService;
 import atenciones.back.model.Paciente;
 import atenciones.back.model.SenalVital;
+import atenciones.back.rabbitmq.RabbitMQProducer;
 import atenciones.back.repository.PacienteRepository;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -29,19 +32,62 @@ public class SenalVitalController {
     private SenalVitalService senalVitalService;
     @Autowired
     private PacienteService pacienteService;
+    @Autowired
+    private RabbitMQProducer rabbitMQProducer;
 
     @PostMapping("/crear/{id}")
     public ResponseEntity<SenalVital> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
         Paciente paciente = pacienteService.obtenerPacientePorId(id)
                 .orElseThrow(() -> new EntityNotFoundException("Paciente no encontrado con ID: " + id));
 
+        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
         // Asignar el paciente a la señal vital
         senalVital.setPaciente(paciente);
+        if (esAnomalia(nuevaSenal)) {
+            // 1️⃣ Generar mensaje de alerta
+            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+
+            // 2️⃣ Enviar alerta a RabbitMQ
+            rabbitMQProducer.enviarMensajeAlerta(mensaje);
+
+            // 3️⃣ Guardar alerta en archivo JSON
+            guardarAlertaEnArchivo(nuevaSenal);
+        }
 
         // Guardar la señal vital
-        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
 
         return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
+    }
+      private String generarMensajeAlertaLegible(SenalVital senal) {
+        return String.format(
+                "⚠️ ALERTA MÉDICA ⚠️\n" +
+                "Paciente: %s %s\n" +
+                "ID: %d\n" +
+                "Fecha: %s\n" +
+                "Temperatura: %.1f°C\n" +
+                "Pulso: %d lpm\n" +
+                "Ritmo Resp.: %d rpm\n" +
+                "Estado: %s\n",
+                senal.getPaciente().getNombre(),
+                senal.getPaciente().getApellido(),
+                senal.getPaciente().getId(),
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                senal.getTemperatura(),
+                senal.getPulso(),
+                senal.getRitmoRespiratorio(),
+                senal.getPacienteEstado()
+        );
+    }
+
+    private void guardarAlertaEnArchivo(SenalVital senal) {
+        // 📌 Implementar la lógica para guardar en JSON
+        senalVitalService.guardarAlertaEnArchivo(senal);
+    }
+    private boolean esAnomalia(SenalVital senal) {
+        // 📌 Implementar la lógica de detección de anomalías
+        return senal.getTemperatura() < 36.0 || senal.getTemperatura() > 38.5 ||
+               senal.getPulso() < 50 || senal.getPulso() > 120 ||
+               senal.getRitmoRespiratorio() < 12 || senal.getRitmoRespiratorio() > 30;
     }
 
     @GetMapping("/todos")
