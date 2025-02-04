@@ -11,7 +11,7 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.queue.alertas}")
     private String alertasQueueName;
 
-    @Value("${app.rabbitmq.exchange}") // Nueva propiedad
+    @Value("${app.rabbitmq.exchange}")
     private String exchangeName;
 
     // 1. Declarar el exchange

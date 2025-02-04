@@ -1,7 +1,6 @@
 package atenciones.back.model;
 
 import java.sql.Date;
-import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.persistence.Column;
@@ -18,7 +17,7 @@ import jakarta.validation.constraints.Size;
 public class Paciente {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Puedes usar otra estrategia según tu base de datos
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
     @Column(name = "paciente_rut", unique = true, nullable = false)

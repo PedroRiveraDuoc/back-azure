@@ -8,12 +8,12 @@ import org.springframework.beans.factory.annotation.Value;
 public class RabbitMQProducer {
     private final RabbitTemplate rabbitTemplate;
 
-    // 1. Mejor práctica: Usar nombres descriptivos para las propiedades
+    // 1. Nueva propiedad para el exchange (necesaria para el envío)
     @Value("${app.rabbitmq.exchange}")
-    private String exchangeName; // [MODIFICADO] Mejor nombre de variable
+    private String exchangeName; 
 
     @Value("${app.rabbitmq.queue.alertas}")
-    private String queueName; // [MODIFICADO] Nombre más descriptivo
+    private String queueName; 
 
     // 2. Nueva propiedad para la routing key (necesaria para el binding)
     @Value("${app.rabbitmq.routingkey}")

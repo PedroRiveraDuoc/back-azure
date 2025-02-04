@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import atenciones.back.Service.PacienteService;
@@ -21,8 +20,6 @@ import atenciones.back.Service.SenalVitalService;
 import atenciones.back.model.Paciente;
 import atenciones.back.model.SenalVital;
 import atenciones.back.rabbitmq.RabbitMQProducer;
-import atenciones.back.repository.PacienteRepository;
-import jakarta.persistence.EntityNotFoundException;
 
 @RestController
 @CrossOrigin
@@ -36,38 +33,43 @@ public class SenalVitalController {
     private RabbitMQProducer rabbitMQProducer;
 
     @PostMapping("/crear/{id}")
-    public ResponseEntity<SenalVital> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
+    public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
+        // Buscar paciente
         Paciente paciente = pacienteService.obtenerPacientePorId(id)
-                .orElseThrow(() -> new EntityNotFoundException("Paciente no encontrado con ID: " + id));
-
-        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
-        // Asignar el paciente a la señal vital
-        senalVital.setPaciente(paciente);
-        if (esAnomalia(nuevaSenal)) {
-            // 1️⃣ Generar mensaje de alerta
-            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
-
-            // 2️⃣ Enviar alerta a RabbitMQ
-            rabbitMQProducer.enviarMensajeAlerta(mensaje);
-
-            // 3️⃣ Guardar alerta en archivo JSON
-            guardarAlertaEnArchivo(nuevaSenal);
+                .orElse(null); // No lanzar excepción directamente, validarlo después
+    
+        if (paciente == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error: El paciente con ID " + id + " no existe.");
         }
-
-        // Guardar la señal vital
-
+    
+        // Asignar paciente a la señal vital antes de guardarla
+        senalVital.setPaciente(paciente);
+    
+        //  Guardar señal vital con el paciente asignado
+        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
+    
+        //  Verificar si hay anomalías
+        if (esAnomalia(nuevaSenal)) {
+            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+            rabbitMQProducer.enviarMensajeAlerta(mensaje);
+        }
+    
         return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
     }
-      private String generarMensajeAlertaLegible(SenalVital senal) {
+
+
+
+    private String generarMensajeAlertaLegible(SenalVital senal) {
         return String.format(
                 "⚠️ ALERTA MÉDICA ⚠️\n" +
-                "Paciente: %s %s\n" +
-                "ID: %d\n" +
-                "Fecha: %s\n" +
-                "Temperatura: %.1f°C\n" +
-                "Pulso: %d lpm\n" +
-                "Ritmo Resp.: %d rpm\n" +
-                "Estado: %s\n",
+                        "Paciente: %s %s\n" +
+                        "ID: %d\n" +
+                        "Fecha: %s\n" +
+                        "Temperatura: %.1f°C\n" +
+                        "Pulso: %d lpm\n" +
+                        "Ritmo Resp.: %d rpm\n" +
+                        "Estado: %s\n",
                 senal.getPaciente().getNombre(),
                 senal.getPaciente().getApellido(),
                 senal.getPaciente().getId(),
@@ -75,19 +77,14 @@ public class SenalVitalController {
                 senal.getTemperatura(),
                 senal.getPulso(),
                 senal.getRitmoRespiratorio(),
-                senal.getPacienteEstado()
-        );
+                senal.getPacienteEstado());
     }
 
-    private void guardarAlertaEnArchivo(SenalVital senal) {
-        // 📌 Implementar la lógica para guardar en JSON
-        senalVitalService.guardarAlertaEnArchivo(senal);
-    }
     private boolean esAnomalia(SenalVital senal) {
         // 📌 Implementar la lógica de detección de anomalías
         return senal.getTemperatura() < 36.0 || senal.getTemperatura() > 38.5 ||
-               senal.getPulso() < 50 || senal.getPulso() > 120 ||
-               senal.getRitmoRespiratorio() < 12 || senal.getRitmoRespiratorio() > 30;
+                senal.getPulso() < 50 || senal.getPulso() > 120 ||
+                senal.getRitmoRespiratorio() < 12 || senal.getRitmoRespiratorio() > 30;
     }
 
     @GetMapping("/todos")

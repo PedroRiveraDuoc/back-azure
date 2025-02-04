@@ -3,7 +3,7 @@ version: '3.8'
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq
+    container_name: rabbitmq1
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -23,13 +23,13 @@ services:
     build:
       context: .  # <-- Asegura que está bien definido
       dockerfile: docker-back.Dockerfile
-    container_name: spring-app
+    container_name: spring2-app
     restart: always
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
-      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq1
     networks:
       - backend-network  # <-- Agregado para incluir el servicio en la red
 
