@@ -9,7 +9,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import org.springframework.beans.factory.annotation.Value;
-import atenciones.back.rabbitmq.RabbitMQProducer;
+
 import atenciones.back.model.SenalVital;
 import atenciones.back.model.Paciente;
 import atenciones.back.repository.ServiceRepository;
@@ -17,31 +17,15 @@ import atenciones.back.repository.ServiceRepository;
 @Service
 public class SenalVitalService {
 
-    private final ServiceRepository serviceRepository;
-    private final RabbitMQProducer rabbitMQProducer;
+    private final ServiceRepository serviceRepository;    
 
-    @Value("${app.rabbitmq.exchange}") // Propiedad para el exchange
-    private String exchange;
 
-    @Value("${app.rabbitmq.queue.alertas}") // Propiedad para la cola
-    private String queueName;
-
-    public SenalVitalService(ServiceRepository serviceRepository, RabbitMQProducer rabbitMQProducer) {
+    public SenalVitalService(ServiceRepository serviceRepository) {
         this.serviceRepository = serviceRepository;
-        this.rabbitMQProducer = rabbitMQProducer;
+        
     }
 
-    public SenalVital crearSenalVital(SenalVital senalVital) {
-        SenalVital nuevaSenal = serviceRepository.save(senalVital);
 
-        if (esAnomalia(nuevaSenal)) {
-            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
-            rabbitMQProducer.enviarMensajeAlerta(mensaje);
-
-        }
-    
-        return nuevaSenal;
-    }
 
     public List<SenalVital> obtenerSenalesVitales() {
         return serviceRepository.findAll();
