@@ -48,32 +48,36 @@ public class SenalVitalController {
         rabbitMQConsumer.limpiarMensajes();
         return "Lista de mensajes limpiada correctamente.";
     }
+
+
     @PostMapping("/crear/{id}")
-    public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
-        // Buscar paciente
-        Paciente paciente = pacienteService.obtenerPacientePorId(id)
-                .orElse(null); // No lanzar excepción directamente, validarlo después
-    
-        if (paciente == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Error: El paciente con ID " + id + " no existe.");
-        }
-    
-        // Asignar paciente a la señal vital antes de guardarla
-        senalVital.setPaciente(paciente);
-    
-        //  Guardar señal vital con el paciente asignado
-        
-        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
-        //  Verificar si hay anomalías
-        if (esAnomalia(nuevaSenal)) {
-            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
-            rabbitMQProducer.enviarMensajeAlerta(mensaje);
-        }
-    
-        return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
+public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
+    // Buscar paciente
+    Paciente paciente = pacienteService.obtenerPacientePorId(id).orElse(null);
+
+    if (paciente == null) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("Error: El paciente con ID " + id + " no existe.");
     }
 
+    // Asignar paciente a la señal vital antes de guardarla
+    senalVital.setPaciente(paciente);
+
+    // Guardar señal vital con el paciente asignado
+    SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
+
+    // Verificar si hay anomalías
+    if (esAnomalia(nuevaSenal)) {
+        String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+        rabbitMQProducer.enviarMensajeAlerta(mensaje);
+        
+        // Devolver el mensaje de alerta junto con la señal vital
+        return ResponseEntity.status(HttpStatus.CREATED).body(mensaje);
+    }
+
+    // Devolver la señal vital si no hay anomalía
+    return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
+}
 
 
     private String generarMensajeAlertaLegible(SenalVital senal) {
