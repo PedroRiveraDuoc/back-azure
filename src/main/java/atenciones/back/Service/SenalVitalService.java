@@ -8,24 +8,50 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.beans.factory.annotation.Value;
 
 import atenciones.back.model.SenalVital;
+import atenciones.back.rabbitmq.RabbitMQProducer;
 import atenciones.back.model.Paciente;
 import atenciones.back.repository.ServiceRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+
+import java.io.IOException;
 
 @Service
 public class SenalVitalService {
 
-    private final ServiceRepository serviceRepository;    
+    private final ServiceRepository serviceRepository;
+    private final RabbitMQProducer rabbitMQProducer;
 
-
-    public SenalVitalService(ServiceRepository serviceRepository) {
+    public SenalVitalService(ServiceRepository serviceRepository, RabbitMQProducer rabbitMQProducer) {
         this.serviceRepository = serviceRepository;
-        
+        this.rabbitMQProducer = rabbitMQProducer;
+
     }
 
+    public SenalVital crearSenalVital(SenalVital senalVital) {
 
+        SenalVital nuevaSenal = serviceRepository.save(senalVital);
+
+        if (esAnomalia(nuevaSenal)) {
+
+            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+
+            rabbitMQProducer.enviarMensajeAlerta(mensaje);
+
+            guardarAlertaEnArchivo(nuevaSenal);
+
+        }
+
+        return nuevaSenal;
+        
+
+    }
 
     public List<SenalVital> obtenerSenalesVitales() {
         return serviceRepository.findAll();
@@ -39,7 +65,7 @@ public class SenalVitalService {
         serviceRepository.deleteById(id);
     }
 
-    // Métodos privados para el manejo de alertas médicas 
+    // Métodos privados para el manejo de alertas médicas
     private boolean esAnomalia(SenalVital senal) {
         return senal.getTemperatura() < 36.0 || senal.getTemperatura() > 38.5 ||
                 senal.getPulso() < 50 || senal.getPulso() > 120 ||
@@ -95,5 +121,25 @@ public class SenalVitalService {
         return !anomalias.isEmpty() ? String.join("\n", anomalias) : "No se detectaron anomalías";
     }
 
-    
+    public void guardarAlertaEnArchivo(SenalVital senal) {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        String nombreArchivo = "alerta_" + senal.getPaciente().getId() + ".json";
+
+        try {
+
+            objectMapper.writeValue(new File(nombreArchivo), senal);
+
+            System.out.println("Archivo JSON guardado: " + nombreArchivo);
+
+        } catch (IOException e) {
+
+            e.printStackTrace();
+
+            System.err.println("Error al escribir el archivo JSON");
+
+        }
+
+    }
 }

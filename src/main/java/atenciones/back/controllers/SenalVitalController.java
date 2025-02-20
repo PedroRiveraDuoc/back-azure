@@ -19,7 +19,8 @@ import atenciones.back.Service.PacienteService;
 import atenciones.back.Service.SenalVitalService;
 import atenciones.back.model.Paciente;
 import atenciones.back.model.SenalVital;
-
+import atenciones.back.rabbitmq.RabbitMQConsumer;
+import atenciones.back.rabbitmq.RabbitMQProducer;
 
 @RestController
 @CrossOrigin
@@ -29,33 +30,49 @@ public class SenalVitalController {
     private SenalVitalService senalVitalService;
     @Autowired
     private PacienteService pacienteService;
-    
+    @Autowired
+    private RabbitMQProducer rabbitMQProducer;
+    private final RabbitMQConsumer rabbitMQConsumer;
 
-    // @PostMapping("/crear/{id}")
-    // public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
-    //     // Buscar paciente
-    //     Paciente paciente = pacienteService.obtenerPacientePorId(id)
-    //             .orElse(null); // No lanzar excepción directamente, validarlo después
+    public SenalVitalController(RabbitMQConsumer rabbitMQConsumer) {
+        this.rabbitMQConsumer = rabbitMQConsumer;
+    }
+
+    @GetMapping("/mensaje")
+    public List<String> obtenerMensajes() {
+        return rabbitMQConsumer.obtenerMensajes();
+    }
+
+    @DeleteMapping("/borrarMensaje")
+    public String limpiarMensajes() {
+        rabbitMQConsumer.limpiarMensajes();
+        return "Lista de mensajes limpiada correctamente.";
+    }
+    @PostMapping("/crear/{id}")
+    public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
+        // Buscar paciente
+        Paciente paciente = pacienteService.obtenerPacientePorId(id)
+                .orElse(null); // No lanzar excepción directamente, validarlo después
     
-    //     if (paciente == null) {
-    //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-    //                 .body("Error: El paciente con ID " + id + " no existe.");
-    //     }
+        if (paciente == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error: El paciente con ID " + id + " no existe.");
+        }
     
-    //     // Asignar paciente a la señal vital antes de guardarla
-    //     senalVital.setPaciente(paciente);
+        // Asignar paciente a la señal vital antes de guardarla
+        senalVital.setPaciente(paciente);
     
-    //     //  Guardar señal vital con el paciente asignado
-    //     SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
+        //  Guardar señal vital con el paciente asignado
+        
+        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
+        //  Verificar si hay anomalías
+        if (esAnomalia(nuevaSenal)) {
+            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+            rabbitMQProducer.enviarMensajeAlerta(mensaje);
+        }
     
-    //     //  Verificar si hay anomalías
-    //     if (esAnomalia(nuevaSenal)) {
-    //         String mensaje = generarMensajeAlertaLegible(nuevaSenal);
-    //         rabbitMQProducer.enviarMensajeAlerta(mensaje);
-    //     }
-    
-    //     return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
-    // }
+        return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
+    }
 
 
 
@@ -78,6 +95,8 @@ public class SenalVitalController {
                 senal.getRitmoRespiratorio(),
                 senal.getPacienteEstado());
     }
+
+
 
     private boolean esAnomalia(SenalVital senal) {
         // 📌 Implementar la lógica de detección de anomalías
