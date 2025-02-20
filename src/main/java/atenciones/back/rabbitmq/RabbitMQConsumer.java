@@ -11,9 +11,9 @@ public class RabbitMQConsumer {
 
     // @RabbitListener(queues = "${app.rabbitmq.queue.alertas}")
     // public void recibirMensaje(String mensaje) {
-    //     System.out.println("Mensaje recibido desde RabbitMQ: " + mensaje);
+    // System.out.println("Mensaje recibido desde RabbitMQ: " + mensaje);
     // }
-       private final List<String> mensajesRecibidos = new ArrayList<>();
+    private final List<String> mensajesRecibidos = new ArrayList<>();
 
     @RabbitListener(queues = "${app.rabbitmq.queue.alertas}")
     public void recibirMensaje(String mensaje) {
