@@ -2,7 +2,9 @@ package atenciones.back.controllers;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -49,40 +51,49 @@ public class SenalVitalController {
         return "Lista de mensajes limpiada correctamente.";
     }
 
-
     @PostMapping("/crear/{id}")
-public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
-    // Buscar paciente
-    Paciente paciente = pacienteService.obtenerPacientePorId(id).orElse(null);
+    public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @PathVariable long id) {
+        // Buscar paciente
+        Paciente paciente = pacienteService.obtenerPacientePorId(id).orElse(null);
 
-    if (paciente == null) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body("Error: El paciente con ID " + id + " no existe.");
+        if (paciente == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "El paciente con ID " + id + " no existe."));
+        }
+
+        // Asignar paciente a la señal vital antes de guardarla
+        senalVital.setPaciente(paciente);
+
+        // Guardar señal vital con el paciente asignado
+        SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
+
+        // Verificar si hay anomalías
+        if (esAnomalia(nuevaSenal)) {
+            String mensaje = generarMensajeAlertaLegible(nuevaSenal);
+
+            // Enviar alerta a RabbitMQ
+            rabbitMQProducer.enviarMensajeAlerta(mensaje);
+
+            // Devolver JSON en lugar de texto plano
+            Map<String, Object> response = new HashMap<>();
+            response.put("alerta", "⚠️ ALERTA MÉDICA ⚠️");
+            response.put("paciente",
+                    nuevaSenal.getPaciente().getNombre() + " " + nuevaSenal.getPaciente().getApellido());
+            response.put("temperatura", nuevaSenal.getTemperatura());
+            response.put("pulso", nuevaSenal.getPulso());
+            response.put("ritmoRespiratorio", nuevaSenal.getRitmoRespiratorio());
+            response.put("estado", nuevaSenal.getPacienteEstado());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
+
+        // Devolver JSON de la señal vital si no hay anomalías
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevaSenal);
     }
-
-    // Asignar paciente a la señal vital antes de guardarla
-    senalVital.setPaciente(paciente);
-
-    // Guardar señal vital con el paciente asignado
-    SenalVital nuevaSenal = senalVitalService.crearSenalVital(senalVital);
-
-    // Verificar si hay anomalías
-    if (esAnomalia(nuevaSenal)) {
-        String mensaje = generarMensajeAlertaLegible(nuevaSenal);
-        rabbitMQProducer.enviarMensajeAlerta(mensaje);
-        
-        // Devolver el mensaje de alerta junto con la señal vital
-        return ResponseEntity.status(HttpStatus.CREATED).body(mensaje);
-    }
-
-    // Devolver la señal vital si no hay anomalía
-    return new ResponseEntity<>(nuevaSenal, HttpStatus.CREATED);
-}
-
 
     private String generarMensajeAlertaLegible(SenalVital senal) {
         return String.format(
-                "⚠️ ALERTA MÉDICA ⚠️\n" +
+                " ALERTA MÉDICA\n" +
                         "Paciente: %s %s\n" +
                         "ID: %d\n" +
                         "Fecha: %s\n" +
@@ -99,8 +110,6 @@ public ResponseEntity<?> crearSenalVital(@RequestBody SenalVital senalVital, @Pa
                 senal.getRitmoRespiratorio(),
                 senal.getPacienteEstado());
     }
-
-
 
     private boolean esAnomalia(SenalVital senal) {
         // 📌 Implementar la lógica de detección de anomalías
